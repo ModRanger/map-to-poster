@@ -1,13 +1,18 @@
 import './style.css';
-import { subscribe, state, getSelectedTheme } from './src/core/state.js';
+import { subscribe, state, updateState, getSelectedTheme } from './src/core/state.js';
 import { initMap, updateMapTheme, invalidateMapSize, waitForTilesLoad, waitForArtisticIdle, updateMarkerVisibility, updateMarkerPosition } from './src/map/map-init.js';
 import { setupControls, updatePreviewStyles } from './src/ui/form.js';
 import { exportToPNG } from './src/core/export.js';
+import { initGpxUpload } from './src/gpx/upload.js';
+import { updateRoute, fitToRoute } from './src/map/route-layer.js';
 
 const initialTheme = getSelectedTheme();
 initMap('map-preview', [state.lat, state.lon], state.zoom, initialTheme.tileUrl);
 
 const syncUI = setupControls();
+initGpxUpload();
+initRouteStyleControls();
+initFitToRouteButton();
 
 const exportBtn = document.getElementById('export-btn');
 const posterContainer = document.getElementById('poster-container');
@@ -54,6 +59,9 @@ let _exportCheckInProgress = false;
 const originalExportInner = exportBtn ? exportBtn.innerHTML : '';
 let exportLoadingMode = null;
 
+let _lastRoute = undefined;
+let _lastRouteStyle = undefined;
+
 subscribe((currentState) => {
 	if (currentState.renderMode === 'tile') {
 		const theme = getSelectedTheme();
@@ -67,9 +75,41 @@ subscribe((currentState) => {
 	updateMarkerVisibility(currentState.showMarker);
 	updateMarkerPosition(currentState.markerLat, currentState.markerLon);
 
+	if (currentState.route !== _lastRoute || currentState.routeStyle !== _lastRouteStyle) {
+		const justLoaded = currentState.route && !_lastRoute;
+		_lastRoute = currentState.route;
+		_lastRouteStyle = currentState.routeStyle;
+		updateRoute(currentState.route, currentState.routeStyle);
+		if (justLoaded) fitToRoute(currentState.route);
+	}
+
 	syncUI(currentState);
 	ensurePreviewReady();
 });
+
+function initRouteStyleControls() {
+	const colorInput = document.getElementById('route-color-input');
+	const weightInput = document.getElementById('route-weight-input');
+	if (colorInput) {
+		colorInput.value = state.routeStyle?.color || '#ef4444';
+		colorInput.addEventListener('input', (e) => {
+			updateState({ routeStyle: { ...state.routeStyle, color: e.target.value } });
+		});
+	}
+	if (weightInput) {
+		weightInput.value = String(state.routeStyle?.weight || 4);
+		weightInput.addEventListener('input', (e) => {
+			updateState({ routeStyle: { ...state.routeStyle, weight: Number(e.target.value) } });
+		});
+	}
+}
+
+function initFitToRouteButton() {
+	const btn = document.getElementById('gpx-fit-btn');
+	btn?.addEventListener('click', () => {
+		if (state.route) fitToRoute(state.route);
+	});
+}
 
 function setExportButtonLoading(loading, mode = 'loading') {
 	if (!exportBtn) return;

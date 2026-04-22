@@ -101,6 +101,28 @@ async function captureMapSnapshot() {
 				}
 			});
 
+			if (state.route && state.route.points && state.route.points.length >= 2) {
+				const map = getMapInstance();
+				const rs = state.routeStyle || {};
+				ctx.save();
+				ctx.strokeStyle = rs.color || '#ef4444';
+				ctx.lineWidth = (rs.weight || 4) * scaleFactor;
+				ctx.globalAlpha = typeof rs.opacity === 'number' ? rs.opacity : 1;
+				ctx.lineJoin = 'round';
+				ctx.lineCap = 'round';
+				ctx.beginPath();
+				for (let i = 0; i < state.route.points.length; i++) {
+					const p = state.route.points[i];
+					const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+					const x = pt.x * scaleFactor;
+					const y = pt.y * scaleFactor;
+					if (i === 0) ctx.moveTo(x, y);
+					else ctx.lineTo(x, y);
+				}
+				ctx.stroke();
+				ctx.restore();
+			}
+
 			if (state.showMarker) {
 				const map = getMapInstance();
 				const zoom = map.getZoom();
