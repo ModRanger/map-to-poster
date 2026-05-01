@@ -39,6 +39,12 @@ export const defaultState = {
 	overlayY: 0.85,
 	showCountry: true,
 	showCoords: true,
+	route: null,
+	routeStyle: {
+		color: '#ef4444',
+		weight: 4,
+		opacity: 1,
+	},
 };
 
 export const state = { ...defaultState };
@@ -75,7 +81,8 @@ const SAVED_KEYS = [
 	'overlayX',
 	'overlayY',
 	'showCountry',
-	'showCoords'
+	'showCoords',
+	'routeStyle'
 ];
 
 function loadSettings() {
